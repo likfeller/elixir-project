@@ -30,6 +30,24 @@ defmodule ElixirProject.Football do
   def get_player!(id), do: Repo.get!(Player, id)
   def get_player(id), do: Repo.get(Player, id)
 
+  def list_favorites do
+    Repo.all(from p in Player, where: p.favorite == true, order_by: [desc: p.rating])
+  end
+
+  def set_favorite(id, favorite) when is_boolean(favorite) do
+    case Repo.get(Player, id) do
+      nil -> {:error, :not_found}
+      player -> player |> Player.changeset(%{favorite: favorite}) |> Repo.update()
+    end
+  end
+
+  def remove_player(id) do
+    case Repo.get(Player, id) do
+      nil -> {:error, :not_found}
+      player -> Repo.delete(player)
+    end
+  end
+
   def count_teams, do: Repo.aggregate(Team, :count)
 
   # --- seeding ---

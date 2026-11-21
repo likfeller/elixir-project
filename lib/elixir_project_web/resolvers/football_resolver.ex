@@ -39,6 +39,20 @@ defmodule ElixirProjectWeb.Resolvers.FootballResolver do
     end
   end
 
+  def set_favorite(_parent, %{id: id, favorite: favorite}, _res) do
+    case Football.set_favorite(id, favorite) do
+      {:ok, player} -> {:ok, player}
+      {:error, reason} -> {:error, "Could not update favorite: #{inspect(reason)}"}
+    end
+  end
+
+  def remove_player(_parent, %{id: id}, _res) do
+    case Football.remove_player(id) do
+      {:ok, _} -> {:ok, true}
+      {:error, reason} -> {:error, "Could not remove player: #{inspect(reason)}"}
+    end
+  end
+
   # Field resolver for team.players (uses the preloaded/queried association).
   def team_players(team, _args, _res) do
     {:ok, Football.list_players_for_team(team.id)}

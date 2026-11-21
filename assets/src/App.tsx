@@ -1,32 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { fetchTeams } from "./api";
+import { fetchTeams, setFavorite, removePlayer } from "./api";
 import type { Team, Player } from "./types";
 import TeamSelector from "./components/TeamSelector";
-import PlayerCircuit from "./components/PlayerCircuit";
+import PlayerCard from "./components/PlayerCard";
 import PlayerModal from "./components/PlayerModal";
 import AddTeamModal from "./components/AddTeamModal";
 import AddPlayerModal from "./components/AddPlayerModal";
 
-// Ghosted footballer silhouette shown behind a card until a real photo exists.
-const FALLBACK_PHOTO =
-  "data:image/svg+xml;utf8," +
-  encodeURIComponent(
-    `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 220'>
-       <circle cx='100' cy='58' r='36' fill='#9fb6d8'/>
-       <path d='M30 220 C30 150 64 116 100 116 C136 116 170 150 170 220 Z' fill='#9fb6d8'/>
-     </svg>`
-  );
+type View = "teams" | "favorites";
 
 export default function App() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [view, setView] = useState<View>("teams");
   const [modalPlayer, setModalPlayer] = useState<Player | null>(null);
   const [showAddTeam, setShowAddTeam] = useState(false);
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Load teams; optionally select a team by name (after adding one).
   const load = useCallback(async (selectName?: string) => {
     const { teams } = await fetchTeams();
     setTeams(teams);
@@ -50,11 +42,38 @@ export default function App() {
     [teams, selectedId]
   );
 
+  // Favorites across all teams, each paired with its team for theming.
+  const favorites = useMemo(
+    () =>
+      teams.flatMap((t) =>
+        t.players.filter((p) => p.favorite).map((p) => ({ player: p, team: t }))
+      ),
+    [teams]
+  );
+
   const primary = selected?.primaryColor ?? "#febe10";
   const secondary = selected?.secondaryColor ?? "#1b3a6b";
 
+  const toggleFavorite = async (p: Player) => {
+    await setFavorite(p.id, !p.favorite);
+    await load();
+  };
+
+  const remove = async (p: Player) => {
+    await removePlayer(p.id);
+    if (modalPlayer?.id === p.id) setModalPlayer(null);
+    await load();
+  };
+
   return (
     <div className="app" style={{ ["--accent" as string]: primary }}>
+      {view === "teams" && selected?.logo && (
+        <div
+          className="team-backdrop"
+          style={{ backgroundImage: `url("${selected.logo}")` }}
+        />
+      )}
+
       <header className="app-header">
         <div className="app-title">
           <span className="ball">⚽</span>
@@ -63,21 +82,67 @@ export default function App() {
             <p>Circuit HUD · player performance over the season</p>
           </div>
         </div>
-        {selected && (
-          <div className="app-team-badge">
-            {selected.logo && <img src={selected.logo} alt="" />}
-            <div>
-              <strong>{selected.name}</strong>
-              <span>{selected.leagueName}</span>
+
+        <div className="header-right">
+          <button
+            className={`fav-star ${view === "favorites" ? "active" : ""}`}
+            title="Favorite players"
+            onClick={() => setView(view === "favorites" ? "teams" : "favorites")}
+          >
+            <span className="fav-star-icon">★</span>
+            {favorites.length > 0 && <span className="fav-star-count">{favorites.length}</span>}
+          </button>
+
+          {view === "teams" && selected && (
+            <div className="app-team-badge">
+              {selected.logo && <img src={selected.logo} alt="" />}
+              <div>
+                <strong>{selected.name}</strong>
+                <span>{selected.leagueName}</span>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </header>
 
       {loading && <div className="status">Loading teams…</div>}
       {error && <div className="status error">Error: {error}</div>}
 
-      {!loading && !error && (
+      {/* ---- Favorites view ---- */}
+      {!loading && !error && view === "favorites" && (
+        <>
+          <div className="squad-toolbar">
+            <h2 className="squad-title">
+              ★ Favorite Players{" "}
+              <span>· {favorites.length} {favorites.length === 1 ? "player" : "players"}</span>
+            </h2>
+            <button className="btn-add" onClick={() => setView("teams")}>← Back to teams</button>
+          </div>
+
+          {favorites.length === 0 ? (
+            <div className="status">
+              No favorites yet. Tap the ☆ on any player card to add them here.
+            </div>
+          ) : (
+            <main className="player-grid">
+              {favorites.map(({ player, team }) => (
+                <PlayerCard
+                  key={player.id}
+                  player={player}
+                  primaryColor={team.primaryColor ?? "#febe10"}
+                  secondaryColor={team.secondaryColor ?? "#1b3a6b"}
+                  onOpen={setModalPlayer}
+                  onToggleFavorite={toggleFavorite}
+                  onRemove={remove}
+                />
+              ))}
+            </main>
+          )}
+        </>
+      )}
+
+      {/* ---- Teams view ---- */}
+      {!loading && !error && view === "teams" && (
         <>
           <TeamSelector teams={teams} selectedId={selectedId} onSelect={setSelectedId} />
 
@@ -92,42 +157,22 @@ export default function App() {
                   </span>
                 </h2>
                 <div className="squad-actions">
-                  <button className="btn-add" onClick={() => setShowAddPlayer(true)}>
-                    + Add Player
-                  </button>
-                  <button className="btn-add" onClick={() => setShowAddTeam(true)}>
-                    + Add Team
-                  </button>
+                  <button className="btn-add" onClick={() => setShowAddPlayer(true)}>+ Add Player</button>
+                  <button className="btn-add" onClick={() => setShowAddTeam(true)}>+ Add Team</button>
                 </div>
               </div>
 
               <main className="player-grid">
                 {selected.players.map((player) => (
-                  <article
-                    className="player-card"
+                  <PlayerCard
                     key={player.id}
-                    onClick={() => setModalPlayer(player)}
-                    title={`View ${player.name}'s profile`}
-                  >
-                    <div
-                      className="player-card-bg"
-                      style={{ backgroundImage: `url("${player.photo ?? FALLBACK_PHOTO}")` }}
-                    />
-                    <PlayerCircuit
-                      player={player}
-                      primaryColor={primary}
-                      secondaryColor={secondary}
-                    />
-                    <div className="player-caption">
-                      <span className="player-num" style={{ color: primary }}>
-                        #{player.number ?? "—"}
-                      </span>
-                      <span className="player-name">{player.name}</span>
-                      <span className="player-meta">
-                        {player.position} · {player.nationality}
-                      </span>
-                    </div>
-                  </article>
+                    player={player}
+                    primaryColor={primary}
+                    secondaryColor={secondary}
+                    onOpen={setModalPlayer}
+                    onToggleFavorite={toggleFavorite}
+                    onRemove={remove}
+                  />
                 ))}
               </main>
             </>
@@ -135,10 +180,12 @@ export default function App() {
         </>
       )}
 
-      {modalPlayer && selected && (
+      {modalPlayer && (
         <PlayerModal
           player={modalPlayer}
-          teamName={selected.name}
+          teamName={
+            teams.find((t) => t.players.some((p) => p.id === modalPlayer.id))?.name ?? ""
+          }
           primaryColor={primary}
           onClose={() => setModalPlayer(null)}
         />
@@ -167,8 +214,7 @@ export default function App() {
       )}
 
       <footer className="app-footer">
-        Data: API-Football &amp; Wikipedia · {selected?.players.length ?? 0} players shown ·
-        click a player for their profile
+        Data: API-Football &amp; Wikipedia · click a player for their profile · ☆ to favorite
       </footer>
     </div>
   );

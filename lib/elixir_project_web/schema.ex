@@ -66,6 +66,8 @@ defmodule ElixirProjectWeb.Schema do
     field :duels_won, :integer
     field :rating, :float
 
+    field :favorite, :boolean
+
     @desc "Scouting-style description (what type of player, why valued)"
     field :description, :string
 
@@ -121,6 +123,19 @@ defmodule ElixirProjectWeb.Schema do
       arg :team_id, non_null(:id)
       arg :name, non_null(:string)
       resolve &FootballResolver.add_player/3
+    end
+
+    @desc "Mark/unmark a player as a favorite"
+    field :set_favorite, :player do
+      arg :id, non_null(:id)
+      arg :favorite, non_null(:boolean)
+      resolve &FootballResolver.set_favorite/3
+    end
+
+    @desc "Remove a player from the dashboard"
+    field :remove_player, :boolean do
+      arg :id, non_null(:id)
+      resolve &FootballResolver.remove_player/3
     end
   end
 end

@@ -28,6 +28,50 @@ body {
   max-width: 1360px;
   margin: 0 auto;
   padding: 28px 28px 60px;
+  position: relative;
+}
+
+/* waving crest/flag backdrop for the selected team */
+.team-backdrop {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  width: min(920px, 82vw);
+  height: min(620px, 74vh);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  opacity: 0.085;
+  filter: blur(0.5px) saturate(1.2);
+  z-index: -1;
+  pointer-events: none;
+  transform-origin: center;
+  animation: flagWave 7s ease-in-out infinite;
+  will-change: transform;
+}
+
+@keyframes flagWave {
+  0% {
+    transform: perspective(900px) rotateY(0deg) skewX(0deg) translateX(0) scale(1);
+  }
+  25% {
+    transform: perspective(900px) rotateY(4deg) skewX(-2.5deg) translateX(-1.2%) scale(1.01);
+  }
+  50% {
+    transform: perspective(900px) rotateY(0deg) skewX(0deg) translateX(0) scale(1);
+  }
+  75% {
+    transform: perspective(900px) rotateY(-4deg) skewX(2.5deg) translateX(1.2%) scale(1.01);
+  }
+  100% {
+    transform: perspective(900px) rotateY(0deg) skewX(0deg) translateX(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .team-backdrop {
+    animation: none;
+  }
 }
 
 /* ---- header ---- */
@@ -63,6 +107,59 @@ body {
   margin: 2px 0 0;
   color: var(--muted);
   font-size: 13px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.fav-star {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+}
+
+.fav-star:hover {
+  transform: translateY(-1px);
+  border-color: #ffd54a;
+  color: #ffd54a;
+}
+
+.fav-star.active {
+  color: #ffd54a;
+  border-color: #ffd54a;
+  box-shadow: 0 0 20px -6px #ffd54a;
+}
+
+.fav-star-icon {
+  font-size: 26px;
+  line-height: 1;
+}
+
+.fav-star-count {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: #ffd54a;
+  color: #1a1400;
+  font-size: 12px;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
 }
 
 .app-team-badge {
@@ -262,6 +359,58 @@ body {
   width: 100%;
   height: auto;
   display: block;
+}
+
+/* ---- card action buttons ---- */
+.card-remove,
+.card-fav {
+  position: absolute;
+  top: 12px;
+  z-index: 4;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: rgba(8, 18, 34, 0.78);
+  backdrop-filter: blur(3px);
+  line-height: 1;
+  transition: transform 0.12s ease, background 0.12s ease, color 0.12s ease, opacity 0.12s ease;
+}
+
+.card-remove {
+  left: 12px;
+  color: #ff8a8a;
+  font-size: 22px;
+  opacity: 0;
+}
+
+.player-card:hover .card-remove {
+  opacity: 1;
+}
+
+.card-remove:hover {
+  background: #e23b3b;
+  color: #fff;
+  transform: scale(1.08);
+}
+
+.card-fav {
+  right: 12px;
+  color: #93a6c4;
+  font-size: 18px;
+}
+
+.card-fav:hover {
+  transform: scale(1.12);
+  color: #ffd54a;
+}
+
+.card-fav.active {
+  border-color: currentColor;
+  text-shadow: 0 0 10px currentColor;
 }
 
 /* ---- circuit traces & nodes ---- */

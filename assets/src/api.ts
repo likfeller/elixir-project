@@ -33,6 +33,7 @@ const TEAMS_QUERY = `
         age
         nationality
         photo
+        favorite
         description
         seasonHistory {
           season
@@ -89,4 +90,15 @@ export function addPlayer(
     teamId,
     name,
   });
+}
+
+export function setFavorite(id: string, favorite: boolean): Promise<unknown> {
+  return gql(`mutation ($id: ID!, $favorite: Boolean!) { setFavorite(id: $id, favorite: $favorite) { id favorite } }`, {
+    id,
+    favorite,
+  });
+}
+
+export function removePlayer(id: string): Promise<unknown> {
+  return gql(`mutation ($id: ID!) { removePlayer(id: $id) }`, { id });
 }

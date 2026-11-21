@@ -37,6 +37,7 @@ defmodule ElixirProject.Football.Player do
     field :description, :string
     field :season_history, :map, default: %{}
     field :history_synced_at, :utc_datetime
+    field :favorite, :boolean, default: false
 
     belongs_to :team, Team
 
@@ -73,7 +74,8 @@ defmodule ElixirProject.Football.Player do
     :raw_stats,
     :description,
     :season_history,
-    :history_synced_at
+    :history_synced_at,
+    :favorite
   ]
 
   def changeset(player, attrs) do

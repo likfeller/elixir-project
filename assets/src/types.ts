@@ -13,6 +13,7 @@ export interface SeasonStat {
 export interface Player {
   id: string;
   name: string;
+  favorite: boolean;
   description: string | null;
   seasonHistory: SeasonStat[];
   number: number | null;
