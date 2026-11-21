@@ -153,12 +153,57 @@ body {
   object-fit: contain;
 }
 
+/* ---- squad toolbar ---- */
+.squad-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 26px;
+  flex-wrap: wrap;
+}
+
+.squad-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.squad-title span {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.squad-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-add {
+  background: color-mix(in srgb, var(--accent) 16%, var(--panel));
+  color: var(--text);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.btn-add:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 22px -10px var(--accent);
+}
+
 /* ---- player grid ---- */
 .player-grid {
   margin-top: 24px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 22px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
 }
 
 .player-card {
@@ -168,6 +213,7 @@ body {
   border-radius: 18px;
   padding: 10px 10px 16px;
   overflow: hidden;
+  cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
@@ -221,44 +267,34 @@ body {
 /* ---- circuit traces & nodes ---- */
 .trace {
   fill: none;
-  stroke-width: 1.7;
+  stroke-width: 2.4;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-dasharray: 5 7;
-  opacity: 0.85;
-  animation: dashFlow 2.4s linear infinite;
-  filter: drop-shadow(0 0 3px currentColor);
+  stroke-dasharray: 7 7;
+  opacity: 0.9;
+  animation: dashFlow 2.2s linear infinite;
+  filter: drop-shadow(0 0 4px currentColor);
 }
 
 @keyframes dashFlow {
   to {
-    stroke-dashoffset: -48;
+    stroke-dashoffset: -56;
   }
 }
 
-.node {
-  animation: nodePulse 2.6s ease-in-out infinite;
+.chip-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
 }
 
-@keyframes nodePulse {
-  0%, 100% {
-    opacity: 0.85;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-.node-value {
-  font-size: 17px;
+.chip-value {
+  font-size: 22px;
   font-weight: 800;
   letter-spacing: -0.01em;
-}
-
-.node-label {
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
+  paint-order: stroke;
+  stroke: #061020;
+  stroke-width: 0.6px;
 }
 
 .deco path {
@@ -329,4 +365,296 @@ body {
   color: var(--muted);
   font-size: 12px;
   text-align: center;
+}
+
+/* ---- player modal ---- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 9, 20, 0.72);
+  backdrop-filter: blur(4px);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  z-index: 100;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal {
+  position: relative;
+  width: min(720px, 100%);
+  max-height: 88vh;
+  overflow-y: auto;
+  background: linear-gradient(180deg, var(--panel-2), var(--panel) 70%, var(--bg-2));
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: 0 30px 80px -20px #000, 0 0 0 1px var(--accent) inset;
+  animation: popIn 0.18s ease;
+}
+
+@keyframes popIn {
+  from { transform: translateY(12px) scale(0.98); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+.modal-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.modal-close:hover {
+  border-color: var(--accent);
+  background: var(--panel-2);
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.modal-photo {
+  flex: 0 0 auto;
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  border: 3px solid var(--accent);
+  overflow: hidden;
+  background: var(--panel);
+  display: grid;
+  place-items: center;
+}
+
+.modal-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+.modal-photo-num {
+  font-size: 40px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.modal-head-info h2 {
+  margin: 4px 0 2px;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.modal-num {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.modal-meta {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.modal-statstrip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin: 22px 0 6px;
+}
+
+.modal-stat {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+}
+
+.modal-stat-value {
+  display: block;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.modal-stat-label {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.modal-section {
+  margin-top: 22px;
+}
+
+.modal-section h3 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.modal-desc {
+  margin: 0;
+  line-height: 1.6;
+  color: #d4e0f2;
+  font-size: 15px;
+}
+
+.modal-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.modal-empty code {
+  background: var(--bg-2);
+  padding: 2px 6px;
+  border-radius: 5px;
+}
+
+.season-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.season-table th,
+.season-table td {
+  padding: 9px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.season-table th {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.season-table td.num,
+.season-table th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.season-table tr.intl td {
+  color: #ffd98a;
+}
+
+.season-table tbody tr:hover td {
+  background: var(--panel);
+}
+
+/* ---- form modals (add team / add player) ---- */
+.modal-sm {
+  width: min(440px, 100%);
+}
+
+.form-title {
+  margin: 0 0 4px;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.form-sub {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.form-label {
+  display: block;
+  margin: 14px 0 6px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.form-select,
+.form-input {
+  width: 100%;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 11px 12px;
+  color: var(--text);
+  font-size: 15px;
+  outline: none;
+}
+
+.form-select:focus,
+.form-input:focus {
+  border-color: var(--accent);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #0a1220;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.form-error {
+  background: rgba(255, 80, 80, 0.12);
+  border: 1px solid rgba(255, 80, 80, 0.4);
+  color: #ff9d9d;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  margin-bottom: 8px;
 }

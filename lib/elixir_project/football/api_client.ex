@@ -63,6 +63,11 @@ defmodule ElixirProject.Football.ApiClient do
     end
   end
 
+  @doc "Search for a player on a given team/season by (partial) name."
+  def search_player_in_team(team_api_id, season, name) do
+    get("/players", team: team_api_id, season: season, search: name)
+  end
+
   # --- low level ---
 
   defp get(path, params) do

@@ -1,6 +1,20 @@
+export interface SeasonStat {
+  season: number | null;
+  team: string | null;
+  league: string | null;
+  competitionType: string | null;
+  appearances: number | null;
+  goals: number | null;
+  assists: number | null;
+  minutes: number | null;
+  rating: number | null;
+}
+
 export interface Player {
   id: string;
   name: string;
+  description: string | null;
+  seasonHistory: SeasonStat[];
   number: number | null;
   position: string | null;
   age: number | null;
@@ -21,6 +35,15 @@ export interface Player {
   duelsTotal: number;
   duelsWon: number;
   rating: number | null;
+}
+
+export interface CatalogTeam {
+  apiId: number;
+  name: string;
+  league: string;
+  logo: string | null;
+  primaryColor: string | null;
+  secondaryColor: string | null;
 }
 
 export interface Team {

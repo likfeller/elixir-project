@@ -1,8 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { fetchTeams } from "./api";
-import type { Team } from "./types";
+import type { Team, Player } from "./types";
 import TeamSelector from "./components/TeamSelector";
 import PlayerCircuit from "./components/PlayerCircuit";
+import PlayerModal from "./components/PlayerModal";
+import AddTeamModal from "./components/AddTeamModal";
+import AddPlayerModal from "./components/AddPlayerModal";
 
 // Ghosted footballer silhouette shown behind a card until a real photo exists.
 const FALLBACK_PHOTO =
@@ -17,18 +20,30 @@ const FALLBACK_PHOTO =
 export default function App() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [modalPlayer, setModalPlayer] = useState<Player | null>(null);
+  const [showAddTeam, setShowAddTeam] = useState(false);
+  const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Load teams; optionally select a team by name (after adding one).
+  const load = useCallback(async (selectName?: string) => {
+    const { teams } = await fetchTeams();
+    setTeams(teams);
+    setSelectedId((cur) => {
+      if (selectName) {
+        const found = teams.find((t) => t.name === selectName);
+        if (found) return found.id;
+      }
+      return cur ?? teams[0]?.id ?? null;
+    });
+  }, []);
+
   useEffect(() => {
-    fetchTeams()
-      .then(({ teams }) => {
-        setTeams(teams);
-        setSelectedId((cur) => cur ?? teams[0]?.id ?? null);
-      })
+    load()
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [load]);
 
   const selected = useMemo(
     () => teams.find((t) => t.id === selectedId) ?? null,
@@ -67,36 +82,93 @@ export default function App() {
           <TeamSelector teams={teams} selectedId={selectedId} onSelect={setSelectedId} />
 
           {selected && (
-            <main className="player-grid">
-              {selected.players.map((player) => (
-                <article className="player-card" key={player.id}>
-                  <div
-                    className="player-card-bg"
-                    style={{ backgroundImage: `url("${player.photo ?? FALLBACK_PHOTO}")` }}
-                  />
-                  <PlayerCircuit
-                    player={player}
-                    primaryColor={primary}
-                    secondaryColor={secondary}
-                  />
-                  <div className="player-caption">
-                    <span className="player-num" style={{ color: primary }}>
-                      #{player.number ?? "—"}
-                    </span>
-                    <span className="player-name">{player.name}</span>
-                    <span className="player-meta">
-                      {player.position} · {player.nationality}
-                    </span>
-                  </div>
-                </article>
-              ))}
-            </main>
+            <>
+              <div className="squad-toolbar">
+                <h2 className="squad-title">
+                  {selected.name}{" "}
+                  <span>
+                    · {selected.players.length}{" "}
+                    {selected.players.length === 1 ? "player" : "players"}
+                  </span>
+                </h2>
+                <div className="squad-actions">
+                  <button className="btn-add" onClick={() => setShowAddPlayer(true)}>
+                    + Add Player
+                  </button>
+                  <button className="btn-add" onClick={() => setShowAddTeam(true)}>
+                    + Add Team
+                  </button>
+                </div>
+              </div>
+
+              <main className="player-grid">
+                {selected.players.map((player) => (
+                  <article
+                    className="player-card"
+                    key={player.id}
+                    onClick={() => setModalPlayer(player)}
+                    title={`View ${player.name}'s profile`}
+                  >
+                    <div
+                      className="player-card-bg"
+                      style={{ backgroundImage: `url("${player.photo ?? FALLBACK_PHOTO}")` }}
+                    />
+                    <PlayerCircuit
+                      player={player}
+                      primaryColor={primary}
+                      secondaryColor={secondary}
+                    />
+                    <div className="player-caption">
+                      <span className="player-num" style={{ color: primary }}>
+                        #{player.number ?? "—"}
+                      </span>
+                      <span className="player-name">{player.name}</span>
+                      <span className="player-meta">
+                        {player.position} · {player.nationality}
+                      </span>
+                    </div>
+                  </article>
+                ))}
+              </main>
+            </>
           )}
         </>
       )}
 
+      {modalPlayer && selected && (
+        <PlayerModal
+          player={modalPlayer}
+          teamName={selected.name}
+          primaryColor={primary}
+          onClose={() => setModalPlayer(null)}
+        />
+      )}
+
+      {showAddTeam && (
+        <AddTeamModal
+          onClose={() => setShowAddTeam(false)}
+          onAdded={async (teamName) => {
+            setShowAddTeam(false);
+            await load(teamName);
+          }}
+        />
+      )}
+
+      {showAddPlayer && selected && (
+        <AddPlayerModal
+          teamId={selected.id}
+          teamName={selected.name}
+          onClose={() => setShowAddPlayer(false)}
+          onAdded={async () => {
+            setShowAddPlayer(false);
+            await load();
+          }}
+        />
+      )}
+
       <footer className="app-footer">
-        Data: API-Football · {selected?.players.length ?? 0} players shown
+        Data: API-Football &amp; Wikipedia · {selected?.players.length ?? 0} players shown ·
+        click a player for their profile
       </footer>
     </div>
   );

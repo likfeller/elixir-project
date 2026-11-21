@@ -34,6 +34,9 @@ defmodule ElixirProject.Football.Player do
     field :rating, :float
 
     field :raw_stats, :map, default: %{}
+    field :description, :string
+    field :season_history, :map, default: %{}
+    field :history_synced_at, :utc_datetime
 
     belongs_to :team, Team
 
@@ -67,7 +70,10 @@ defmodule ElixirProject.Football.Player do
     :duels_total,
     :duels_won,
     :rating,
-    :raw_stats
+    :raw_stats,
+    :description,
+    :season_history,
+    :history_synced_at
   ]
 
   def changeset(player, attrs) do

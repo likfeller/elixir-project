@@ -1,4 +1,4 @@
-import type { Team } from "./types";
+import type { Team, CatalogTeam } from "./types";
 
 // Minimal GraphQL fetch helper — no heavy client needed for this dashboard.
 async function gql<T>(query: string, variables: Record<string, unknown> = {}): Promise<T> {
@@ -33,6 +33,18 @@ const TEAMS_QUERY = `
         age
         nationality
         photo
+        description
+        seasonHistory {
+          season
+          team
+          league
+          competitionType
+          appearances
+          goals
+          assists
+          minutes
+          rating
+        }
         appearances
         minutes
         goals
@@ -55,4 +67,26 @@ const TEAMS_QUERY = `
 
 export function fetchTeams(): Promise<{ teams: Team[] }> {
   return gql<{ teams: Team[] }>(TEAMS_QUERY);
+}
+
+export function fetchCatalogTeams(): Promise<{ catalogTeams: CatalogTeam[] }> {
+  return gql(`
+    query CatalogTeams {
+      catalogTeams { apiId name league logo primaryColor secondaryColor }
+    }
+  `);
+}
+
+export function addTeam(apiId: number): Promise<{ addTeam: { id: string; name: string } }> {
+  return gql(`mutation ($apiId: Int!) { addTeam(apiId: $apiId) { id name } }`, { apiId });
+}
+
+export function addPlayer(
+  teamId: string,
+  name: string
+): Promise<{ addPlayer: { id: string; name: string } }> {
+  return gql(`mutation ($teamId: ID!, $name: String!) { addPlayer(teamId: $teamId, name: $name) { id name } }`, {
+    teamId,
+    name,
+  });
 }

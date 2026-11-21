@@ -6,7 +6,7 @@ defmodule ElixirProject.Football do
   import Ecto.Query, warn: false
 
   alias ElixirProject.Repo
-  alias ElixirProject.Football.{Team, Player, ApiClient, SampleData}
+  alias ElixirProject.Football.{Team, Player, ApiClient, SampleData, TeamCatalog, Wikipedia}
 
   # --- queries ---
 
@@ -66,6 +66,161 @@ defmodule ElixirProject.Football do
     end)
 
     {:ok, count_teams()}
+  end
+
+  # --- adding teams & players ---
+
+  @sample_years [2019, 2020, 2021, 2022, 2023]
+
+  @doc "Catalog teams available to add (top-5 leagues, minus ones already present)."
+  def catalog_teams do
+    existing_ids = Repo.all(from t in Team, select: t.api_id) |> MapSet.new()
+    existing_names = Repo.all(from t in Team, select: t.name) |> MapSet.new()
+
+    TeamCatalog.all()
+    |> Enum.reject(fn t ->
+      MapSet.member?(existing_ids, t.api_id) or MapSet.member?(existing_names, t.name)
+    end)
+  end
+
+  @doc """
+  Add a team from the catalog. When an API key is configured, its real squad is
+  pulled immediately; otherwise it starts empty and players are added by search.
+  """
+  def add_team_from_catalog(api_id) do
+    case TeamCatalog.get(api_id) do
+      nil ->
+        {:error, :not_in_catalog}
+
+      cat ->
+        attrs = %{
+          api_id: cat.api_id,
+          name: cat.name,
+          league_name: cat.league,
+          type: "club",
+          logo: cat.logo,
+          primary_color: cat.primary_color,
+          secondary_color: cat.secondary_color
+        }
+
+        case %Team{} |> Team.changeset(attrs) |> Repo.insert() do
+          {:ok, team} ->
+            if ApiClient.configured?(), do: sync_team_from_api(team)
+            {:ok, team}
+
+          {:error, _} = err ->
+            case get_team_by_name(cat.name) do
+              nil -> err
+              existing -> {:ok, existing}
+            end
+        end
+    end
+  end
+
+  @doc """
+  Add a player (by name) to a team. With an API key we fetch real stats/photo
+  from API-Football; otherwise we pull a photo + description from Wikipedia and
+  generate representative stats.
+  """
+  def add_player_by_name(team_id, name) do
+    team = get_team!(team_id)
+    name = String.trim(name)
+
+    cond do
+      name == "" -> {:error, :empty_name}
+      ApiClient.configured?() -> add_player_via_api(team, name)
+      true -> add_player_via_wiki(team, name)
+    end
+  end
+
+  defp add_player_via_api(team, name) do
+    with {:ok, team} <- ensure_api_id(team),
+         {:ok, %{"response" => [entry | _]}} <-
+           ApiClient.search_player_in_team(team.api_id, ApiClient.season(), name) do
+      attrs =
+        team
+        |> map_api_player(entry)
+        |> put_sample_seasons(team)
+
+      %Player{} |> Player.changeset(attrs) |> Repo.insert()
+    else
+      _ -> add_player_via_wiki(team, name)
+    end
+  end
+
+  defp add_player_via_wiki(team, name) do
+    wiki = Wikipedia.lookup(name) || %{photo: nil, description: nil}
+
+    attrs =
+      team
+      |> sample_player_attrs(name)
+      |> Map.put(:photo, wiki.photo)
+      |> Map.put(:description, wiki.description)
+      |> put_sample_seasons(team)
+
+    %Player{} |> Player.changeset(attrs) |> Repo.insert()
+  end
+
+  # Representative current-season stats for a newly added player, derived
+  # deterministically from the name so repeats are stable.
+  defp sample_player_attrs(team, name) do
+    h = :erlang.phash2(name, 1000)
+    apps = 18 + rem(h, 20)
+    goals = rem(h, 14)
+    assists = rem(div(h, 3), 10)
+
+    %{
+      name: name,
+      team_id: team.id,
+      season: 2023,
+      appearances: apps,
+      minutes: apps * 74,
+      goals: goals,
+      assists: assists,
+      shots_total: goals * 4 + rem(h, 20),
+      shots_on: goals * 2 + rem(h, 8),
+      passes_total: apps * 35,
+      passes_key: rem(h, 40),
+      pass_accuracy: 74 + rem(h, 18),
+      dribbles_attempts: rem(h, 120),
+      dribbles_success: rem(div(h, 2), 70),
+      tackles: rem(div(h, 5), 60),
+      duels_total: 100 + rem(h, 250),
+      duels_won: 50 + rem(h, 120),
+      rating: Float.round(6.7 + rem(h, 13) / 10, 1)
+    }
+  end
+
+  defp put_sample_seasons(attrs, team) do
+    name = attrs[:name] || attrs["name"]
+    apps = attrs[:appearances] || 20
+    goals = attrs[:goals] || 0
+    assists = attrs[:assists] || 0
+    rating = attrs[:rating] || 6.9
+
+    seasons =
+      @sample_years
+      |> Enum.with_index()
+      |> Enum.map(fn {year, i} ->
+        f = 0.55 + 0.1125 * i
+        j = :erlang.phash2({name, year}, 7) - 3
+        a = (round(apps * f) + j) |> max(3) |> min(42)
+
+        %{
+          "season" => year,
+          "team" => team.name,
+          "league" => team.league_name,
+          "competition_type" => team.type,
+          "appearances" => a,
+          "goals" => max(0, round(goals * f) + div(j, 2)),
+          "assists" => max(0, round(assists * f) + div(j, 2)),
+          "minutes" => a * 74,
+          "rating" => Float.round(rating + j * 0.03, 1)
+        }
+      end)
+      |> Enum.reverse()
+
+    Map.put(attrs, :season_history, %{"seasons" => seasons})
   end
 
   # --- live sync from API-Football ---
