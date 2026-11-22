@@ -30,14 +30,31 @@ defmodule ElixirProject.Football do
   def get_player!(id), do: Repo.get!(Player, id)
   def get_player(id), do: Repo.get(Player, id)
 
+  @max_favorites 11
+
+  def max_favorites, do: @max_favorites
+
   def list_favorites do
     Repo.all(from p in Player, where: p.favorite == true, order_by: [desc: p.rating])
   end
 
+  def count_favorites do
+    Repo.aggregate(from(p in Player, where: p.favorite == true), :count)
+  end
+
   def set_favorite(id, favorite) when is_boolean(favorite) do
     case Repo.get(Player, id) do
-      nil -> {:error, :not_found}
-      player -> player |> Player.changeset(%{favorite: favorite}) |> Repo.update()
+      nil ->
+        {:error, :not_found}
+
+      player ->
+        cond do
+          favorite and not player.favorite and count_favorites() >= @max_favorites ->
+            {:error, :max_favorites}
+
+          true ->
+            player |> Player.changeset(%{favorite: favorite}) |> Repo.update()
+        end
     end
   end
 

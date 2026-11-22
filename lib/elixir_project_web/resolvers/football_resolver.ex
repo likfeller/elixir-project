@@ -41,8 +41,14 @@ defmodule ElixirProjectWeb.Resolvers.FootballResolver do
 
   def set_favorite(_parent, %{id: id, favorite: favorite}, _res) do
     case Football.set_favorite(id, favorite) do
-      {:ok, player} -> {:ok, player}
-      {:error, reason} -> {:error, "Could not update favorite: #{inspect(reason)}"}
+      {:ok, player} ->
+        {:ok, player}
+
+      {:error, :max_favorites} ->
+        {:error, "Your starting XI is full (#{Football.max_favorites()}). Remove one first."}
+
+      {:error, reason} ->
+        {:error, "Could not update favorite: #{inspect(reason)}"}
     end
   end
 

@@ -6,8 +6,10 @@ import PlayerCard from "./components/PlayerCard";
 import PlayerModal from "./components/PlayerModal";
 import AddTeamModal from "./components/AddTeamModal";
 import AddPlayerModal from "./components/AddPlayerModal";
+import Pitch from "./components/Pitch";
 
 type View = "teams" | "favorites";
+const MAX_XI = 11;
 
 export default function App() {
   const [teams, setTeams] = useState<Team[]>([]);
@@ -18,6 +20,12 @@ export default function App() {
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const showNotice = (msg: string) => {
+    setNotice(msg);
+    window.setTimeout(() => setNotice((cur) => (cur === msg ? null : cur)), 3500);
+  };
 
   const load = useCallback(async (selectName?: string) => {
     const { teams } = await fetchTeams();
@@ -55,8 +63,16 @@ export default function App() {
   const secondary = selected?.secondaryColor ?? "#1b3a6b";
 
   const toggleFavorite = async (p: Player) => {
-    await setFavorite(p.id, !p.favorite);
-    await load();
+    if (!p.favorite && favorites.length >= MAX_XI) {
+      showNotice(`Your starting XI is full (${MAX_XI}). Remove one to add another.`);
+      return;
+    }
+    try {
+      await setFavorite(p.id, !p.favorite);
+      await load();
+    } catch (e) {
+      showNotice((e as Error).message);
+    }
   };
 
   const remove = async (p: Player) => {
@@ -108,35 +124,22 @@ export default function App() {
       {loading && <div className="status">Loading teams…</div>}
       {error && <div className="status error">Error: {error}</div>}
 
-      {/* ---- Favorites view ---- */}
+      {/* ---- Favorites view: starting XI on a pitch ---- */}
       {!loading && !error && view === "favorites" && (
         <>
           <div className="squad-toolbar">
             <h2 className="squad-title">
-              ★ Favorite Players{" "}
-              <span>· {favorites.length} {favorites.length === 1 ? "player" : "players"}</span>
+              ★ Starting XI <span>· 4-3-3 · {favorites.length}/{MAX_XI}</span>
             </h2>
             <button className="btn-add" onClick={() => setView("teams")}>← Back to teams</button>
           </div>
 
-          {favorites.length === 0 ? (
+          <Pitch favorites={favorites} onOpen={setModalPlayer} onRemove={toggleFavorite} />
+
+          {favorites.length === 0 && (
             <div className="status">
-              No favorites yet. Tap the ☆ on any player card to add them here.
+              Your XI is empty. Go to a team and tap the ☆ on players to pick your eleven.
             </div>
-          ) : (
-            <main className="player-grid">
-              {favorites.map(({ player, team }) => (
-                <PlayerCard
-                  key={player.id}
-                  player={player}
-                  primaryColor={team.primaryColor ?? "#febe10"}
-                  secondaryColor={team.secondaryColor ?? "#1b3a6b"}
-                  onOpen={setModalPlayer}
-                  onToggleFavorite={toggleFavorite}
-                  onRemove={remove}
-                />
-              ))}
-            </main>
           )}
         </>
       )}
@@ -212,6 +215,8 @@ export default function App() {
           }}
         />
       )}
+
+      {notice && <div className="notice-toast">{notice}</div>}
 
       <footer className="app-footer">
         Data: API-Football &amp; Wikipedia · click a player for their profile · ☆ to favorite
